@@ -35,10 +35,27 @@ router.post('/ask', async (req, res) => {
     interpreted: f,
     restaurants: restaurants.slice(0, 5),
     events: events.slice(0, 5),
-    // For "both": pair the soonest event with the best nearby restaurant
-    night_out: f.intent === 'both' && events[0] && restaurants[0]
-      ? { event: events[0], restaurant: restaurants[0] } : null,
+    night_out: f.intent === 'both' ? await nightOut(events[0], restaurants[0], f) : null,
   });
 });
+
+// Pair the soonest event with a good place to eat NEAR THE EVENT (not near the user).
+// Events without coordinates fall back to the best place near the user.
+// A failure here shouldn't sink the whole response, so it degrades to null.
+async function nightOut(event, nearUser, f) {
+  if (!event) return null;
+  if (event.lat == null) return nearUser ? { event, restaurant: nearUser } : null;
+  try {
+    const [restaurant] = await discover({
+      lat: event.lat, lng: event.lng, radius: 1500,
+      cuisine: f.cuisine, maxPrice: f.maxPrice, minRating: f.minRating,
+    });
+    if (!restaurant) return null;
+    return { event, restaurant: { ...restaurant, reason: `${restaurant.reason} from the event` } };
+  } catch (e) {
+    console.error('night_out:', e.message);
+    return null;
+  }
+}
 
 export default router;

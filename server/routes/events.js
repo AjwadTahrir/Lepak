@@ -4,7 +4,7 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { extractEventFromPoster } from '../services/gemini.js';
-import { km } from '../lib/geo.js';
+import { km, bbox } from '../lib/geo.js';
 
 const router = Router();
 
@@ -19,11 +19,16 @@ const when = (iso) =>
 
 export async function findEvents({ lat, lng, radiusKm = 10, from = new Date(),
                                    to = new Date(Date.now() + 14 * 864e5), category, free }) {
+  // Area filter in the DB, so we don't load every event in Malaysia. Events without
+  // coordinates are kept (current behaviour). Values are numbers we computed, safe to inline.
+  const b = bbox(lat, lng, radiusKm * 1000);
   let q = supabase.from('events').select('*')
     .eq('status', 'approved')
     .gte('starts_at', from.toISOString())
     .lte('starts_at', to.toISOString())
-    .order('starts_at');
+    .or(`lat.is.null,and(lat.gte.${b.minLat},lat.lte.${b.maxLat},lng.gte.${b.minLng},lng.lte.${b.maxLng})`)
+    .order('starts_at')
+    .limit(500);
   if (CATEGORIES.includes(category)) q = q.eq('category', category);
   if (free) q = q.eq('is_free', true);
 

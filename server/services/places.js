@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase.js';
-import { km } from '../lib/geo.js';
+import { km, bbox } from '../lib/geo.js';
 
 const CACHE_DAYS = 30;          // Google allows caching lat/lng for up to 30 days
 const MIN_CACHED = 15;          // below this, go to Google
@@ -11,12 +11,6 @@ const CUISINE_TYPES = {
   western: 'american_restaurant', seafood: 'seafood_restaurant',
   cafe: 'cafe', fastfood: 'fast_food_restaurant',
 };
-
-function bbox(lat, lng, radius) {
-  const dLat = radius / 111_000;
-  const dLng = radius / (111_000 * Math.cos((lat * Math.PI) / 180));
-  return { minLat: lat - dLat, maxLat: lat + dLat, minLng: lng - dLng, maxLng: lng + dLng };
-}
 
 async function fetchFromGoogle(lat, lng, radius, type) {
   const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
