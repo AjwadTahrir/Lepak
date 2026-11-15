@@ -22,28 +22,20 @@ const when = (iso) =>
     timeZone: 'Asia/Kuala_Lumpur',
   }).format(new Date(iso));
 
-// ---------- Public: nearby approved events ----------
-router.get('/nearby', async (req, res) => {
-  const lat = parseFloat(req.query.lat), lng = parseFloat(req.query.lng);
-  if (Number.isNaN(lat) || Number.isNaN(lng)) return res.status(400).json({ error: 'lat and lng required' });
-
-  const radiusKm = Math.min(parseFloat(req.query.radiusKm) || 10, 50);
-  const days = Math.min(parseInt(req.query.days) || 14, 90);
-  const from = new Date();
-  const to = new Date(Date.now() + days * 864e5);
-
+export async function findEvents({ lat, lng, radiusKm = 10, from = new Date(),
+                                   to = new Date(Date.now() + 14 * 864e5), category, free }) {
   let q = supabase.from('events').select('*')
     .eq('status', 'approved')
     .gte('starts_at', from.toISOString())
     .lte('starts_at', to.toISOString())
     .order('starts_at');
-  if (CATEGORIES.includes(req.query.category)) q = q.eq('category', req.query.category);
-  if (req.query.free === 'true') q = q.eq('is_free', true);
+  if (CATEGORIES.includes(category)) q = q.eq('category', category);
+  if (free) q = q.eq('is_free', true);
 
   const { data, error } = await q;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) throw new Error(error.message);
 
-  const out = data
+  return data
     .map((e) => ({ ...e, distance_km: e.lat != null ? +km(lat, lng, e.lat, e.lng).toFixed(2) : null }))
     .filter((e) => e.distance_km == null || e.distance_km <= radiusKm)
     .map((e) => ({
@@ -51,8 +43,22 @@ router.get('/nearby', async (req, res) => {
       reason: [when(e.starts_at), e.is_free ? 'Free' : e.price_text,
                e.distance_km != null ? `${e.distance_km} km away` : null].filter(Boolean).join(' · '),
     }));
+}
 
-  res.json(out);
+router.get('/nearby', async (req, res) => {
+  const lat = parseFloat(req.query.lat), lng = parseFloat(req.query.lng);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return res.status(400).json({ error: 'lat and lng required' });
+
+  const days = Math.min(parseInt(req.query.days) || 14, 90);
+  try {
+    res.json(await findEvents({
+      lat, lng,
+      radiusKm: Math.min(parseFloat(req.query.radiusKm) || 10, 50),
+      to: new Date(Date.now() + days * 864e5),
+      category: req.query.category,
+      free: req.query.free === 'true',
+    }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ---------- Logged-in users: submit an event (goes to pending) ----------

@@ -7,6 +7,7 @@ import { supabase } from './lib/supabase.js';
 import { requireAuth } from './middleware/auth.js';
 import restaurantsRouter from './routes/restaurants.js';
 import eventsRouter from './routes/events.js';
+import discoveryRouter from './routes/discovery.js';
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(cors({ origin: process.env.CLIENT_ORIGIN }));
 app.use(express.json({ limit: '1mb' }));
 app.use(rateLimit({ windowMs: 60_000, max: 100 }));
 app.use('/api/events', eventsRouter);
+app.use('/api/discovery', discoveryRouter);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
