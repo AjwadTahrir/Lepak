@@ -4,17 +4,12 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { extractEventFromPoster } from '../services/gemini.js';
+import { km } from '../lib/geo.js';
 
 const router = Router();
 
 const CATEGORIES = ['music', 'food', 'sports', 'campus', 'market', 'arts', 'other'];
 
-function km(aLat, aLng, bLat, bLng) {
-  const r = (x) => (x * Math.PI) / 180;
-  const h = Math.sin(r(bLat - aLat) / 2) ** 2 +
-            Math.cos(r(aLat)) * Math.cos(r(bLat)) * Math.sin(r(bLng - aLng) / 2) ** 2;
-  return 6371 * 2 * Math.asin(Math.sqrt(h));
-}
 
 const when = (iso) =>
   new Intl.DateTimeFormat('en-MY', {
@@ -141,10 +136,14 @@ router.get('/admin/pending', requireAuth, requireAdmin, async (req, res) => {
   res.json(data);
 });
 
+// Only pending events can be reviewed, so a double-click or a stale tab can't flip
+// an approved event to rejected (or re-approve a rejected one).
 async function setStatus(req, res, status) {
   const { data, error } = await supabase.from('events').update({ status })
-    .eq('id', req.params.id).select().single();
-  if (error) throw new Error(`set status: ${error.message}`);
+    .eq('id', req.params.id).eq('status', 'pending').select().maybeSingle();
+  // 22P02 = malformed id (e.g. not a uuid): treat as not found
+  if (error && error.code !== '22P02') throw new Error(`set status: ${error.message}`);
+  if (!data) return res.status(404).json({ error: 'Event not found or already reviewed' });
   res.json(data);
 }
 

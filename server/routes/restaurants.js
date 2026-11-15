@@ -1,18 +1,21 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { getNearbyPlaces } from '../services/places.js';
+import { km } from '../lib/geo.js';
 
 const router = Router();
+
+// Cache misses call Google Places (billed), so cap per IP on top of the global limit
+router.use(rateLimit({ windowMs: 10 * 60 * 1000, max: 60, message: { error: 'Too many requests, try again in a few minutes' } }));
 
 const PRICE = { PRICE_LEVEL_FREE: 0, PRICE_LEVEL_INEXPENSIVE: 1, PRICE_LEVEL_MODERATE: 2,
                 PRICE_LEVEL_EXPENSIVE: 3, PRICE_LEVEL_VERY_EXPENSIVE: 4 };
 const PRICE_LABEL = ['Free', '$', '$$', '$$$', '$$$$'];
 
-function km(aLat, aLng, bLat, bLng) {
-  const r = (x) => (x * Math.PI) / 180;
-  const h = Math.sin(r(bLat - aLat) / 2) ** 2 +
-            Math.cos(r(aLat)) * Math.cos(r(bLat)) * Math.sin(r(bLng - aLng) / 2) ** 2;
-  return 6371 * 2 * Math.asin(Math.sqrt(h));
-}
+const DEFAULT_MIN_RATING = 3.5;
+// Bayesian average: few reviews get pulled toward PRIOR. PRIOR is deliberately "meh" (3.5)
+// so a place with 0-3 reviews can't outrank a well-reviewed 4.2. M = reviews needed to be trusted half-way.
+const PRIOR = 3.5, M = 25;
 
 export async function discover(query) {
   const lat = parseFloat(query.lat), lng = parseFloat(query.lng);
@@ -20,7 +23,9 @@ export async function discover(query) {
 
   const radius = Math.min(parseInt(query.radius) || 2000, 5000);
   const maxPrice = query.maxPrice != null ? parseInt(query.maxPrice) : null;
-  const minRating = parseFloat(query.minRating) || 0;
+  // minRating=0 is allowed explicitly; missing/invalid falls back to the default
+  const parsedMin = parseFloat(query.minRating);
+  const minRating = Number.isNaN(parsedMin) ? DEFAULT_MIN_RATING : parsedMin;
 
   const places = await getNearbyPlaces({ lat, lng, radius, cuisine: query.cuisine });
 
@@ -28,18 +33,19 @@ export async function discover(query) {
     .map((p) => {
       const dist = km(lat, lng, p.lat, p.lng);
       const price = PRICE[p.price_level] ?? null;
-      const rating = p.rating ?? 0;
-      const m = 50, C = 4.0, v = p.rating_count ?? 0;
-      const weighted = (v / (v + m)) * rating + (m / (v + m)) * C;
+      const v = p.rating != null ? p.rating_count ?? 0 : 0;     // unrated = no evidence
+      const weighted = (v * (p.rating ?? 0) + M * PRIOR) / (v + M);
       return { ...p, distance_km: +dist.toFixed(2), price, score: weighted * 2 - dist };
     })
     .filter((p) => p.distance_km * 1000 <= radius)
+    // Unrated places stay (new stalls are worth discovering) but rank as PRIOR
     .filter((p) => p.rating == null || p.rating >= minRating)
-    .filter((p) => maxPrice == null || p.price == null || p.price <= maxPrice)
+    .filter((p) => maxPrice == null || Number.isNaN(maxPrice) || p.price == null || p.price <= maxPrice)
     .sort((a, b) => b.score - a.score)
     .map((p) => ({
       ...p,
-      reason: [p.rating ? `${p.rating}★` : null, p.price != null ? PRICE_LABEL[p.price] : null,
+      reason: [p.rating ? `${p.rating}★ (${p.rating_count})` : 'New, no reviews yet',
+               p.price != null ? PRICE_LABEL[p.price] : null,
                `${p.distance_km} km away`].filter(Boolean).join(' · '),
     }));
 }
