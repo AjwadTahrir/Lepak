@@ -50,49 +50,86 @@ router.get('/nearby', async (req, res) => {
   if (Number.isNaN(lat) || Number.isNaN(lng)) return res.status(400).json({ error: 'lat and lng required' });
 
   const days = Math.min(parseInt(req.query.days) || 14, 90);
-  try {
-    res.json(await findEvents({
-      lat, lng,
-      radiusKm: Math.min(parseFloat(req.query.radiusKm) || 10, 50),
-      to: new Date(Date.now() + days * 864e5),
-      category: req.query.category,
-      free: req.query.free === 'true',
-    }));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  res.json(await findEvents({
+    lat, lng,
+    radiusKm: Math.min(parseFloat(req.query.radiusKm) || 10, 50),
+    to: new Date(Date.now() + days * 864e5),
+    category: req.query.category,
+    free: req.query.free === 'true',
+  }));
 });
 
 // ---------- Logged-in users: submit an event (goes to pending) ----------
-router.post('/', requireAuth, async (req, res) => {
+const bad = (msg) => Object.assign(new Error(msg), { status: 400 });
+
+// Optional text field: null if empty, trimmed and capped otherwise
+const text = (v, max) => {
+  if (v == null || v === '') return null;
+  if (typeof v !== 'string' && typeof v !== 'number') throw bad('Text fields must be strings');
+  return String(v).trim().slice(0, max) || null;
+};
+
+// Only http(s), so a "javascript:" link can never reach the client
+const link = (v, field) => {
+  const s = text(v, 500);
+  if (!s) return null;
+  let u;
+  try { u = new URL(s); } catch { throw bad(`${field} must be a valid URL`); }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') throw bad(`${field} must be http(s)`);
+  return u.href;
+};
+
+const submitLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, max: 20,
+  keyGenerator: (req) => req.user.id,
+  message: { error: 'Too many submissions today, try again tomorrow' },
+});
+
+router.post('/', requireAuth, submitLimiter, async (req, res) => {
   const b = req.body ?? {};
-  const title = String(b.title ?? '').trim();
+  const title = text(b.title, 200) ?? '';
   const starts = new Date(b.starts_at);
 
-  if (title.length < 3 || title.length > 120) return res.status(400).json({ error: 'Title must be 3-120 characters' });
-  if (Number.isNaN(starts.getTime())) return res.status(400).json({ error: 'Valid starts_at required' });
-  if (starts < new Date()) return res.status(400).json({ error: 'Event must be in the future' });
-  if (b.category && !CATEGORIES.includes(b.category)) return res.status(400).json({ error: 'Invalid category' });
+  if (title.length < 3 || title.length > 120) throw bad('Title must be 3-120 characters');
+  if (b.starts_at == null || Number.isNaN(starts.getTime())) throw bad('Valid starts_at required');
+  if (starts < new Date()) throw bad('Event must be in the future');
+  if (starts > Date.now() + 365 * 864e5) throw bad('Event must be within the next year');
+  if (b.category && !CATEGORIES.includes(b.category)) throw bad('Invalid category');
+
+  let ends = null;
+  if (b.ends_at) {
+    ends = new Date(b.ends_at);
+    if (Number.isNaN(ends.getTime())) throw bad('ends_at is not a valid date');
+    if (ends < starts) throw bad('ends_at must be after starts_at');
+  }
+
+  // Both or neither, and on Earth
+  const hasLat = b.lat != null, hasLng = b.lng != null;
+  if (hasLat !== hasLng) throw bad('Send both lat and lng, or neither');
+  if (hasLat && !(typeof b.lat === 'number' && Math.abs(b.lat) <= 90 &&
+                  typeof b.lng === 'number' && Math.abs(b.lng) <= 180)) throw bad('Invalid lat/lng');
 
   const row = {
     title,
-    description: b.description?.toString().slice(0, 2000) ?? null,
-    category: b.category ?? 'other',
+    description: text(b.description, 2000),
+    category: b.category || 'other',
     starts_at: starts.toISOString(),
-    ends_at: b.ends_at ? new Date(b.ends_at).toISOString() : null,
-    venue_name: b.venue_name ?? null,
-    address: b.address ?? null,
-    lat: typeof b.lat === 'number' ? b.lat : null,
-    lng: typeof b.lng === 'number' ? b.lng : null,
-    is_free: !!b.is_free,
-    price_text: b.price_text ?? null,
-    poster_url: b.poster_url ?? null,
-    source_url: b.source_url ?? null,
+    ends_at: ends ? ends.toISOString() : null,
+    venue_name: text(b.venue_name, 200),
+    address: text(b.address, 300),
+    lat: hasLat ? b.lat : null,
+    lng: hasLng ? b.lng : null,
+    is_free: b.is_free === true,
+    price_text: text(b.price_text, 50),
+    poster_url: link(b.poster_url, 'poster_url'),
+    source_url: link(b.source_url, 'source_url'),
     source: 'user',
     status: 'pending',          // always pending, never trust the client
     submitted_by: req.user.id,
   };
 
   const { data, error } = await supabase.from('events').insert(row).select().single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) throw new Error(`events insert: ${error.message}`);
   res.status(201).json(data);
 });
 
@@ -100,14 +137,14 @@ router.post('/', requireAuth, async (req, res) => {
 router.get('/admin/pending', requireAuth, requireAdmin, async (req, res) => {
   const { data, error } = await supabase.from('events').select('*')
     .eq('status', 'pending').order('created_at');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) throw new Error(`pending list: ${error.message}`);
   res.json(data);
 });
 
 async function setStatus(req, res, status) {
   const { data, error } = await supabase.from('events').update({ status })
     .eq('id', req.params.id).select().single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) throw new Error(`set status: ${error.message}`);
   res.json(data);
 }
 
@@ -134,7 +171,8 @@ router.post('/extract', requireAuth, extractLimiter, upload.single('poster'), as
     const draft = await extractEventFromPoster(req.file.buffer, req.file.mimetype);
     res.json({ draft });     // a draft only: nothing is saved yet
   } catch (e) {
-    res.status(502).json({ error: 'Could not read the poster, try a clearer image', detail: e.message });
+    console.error('poster extract:', e.message);     // log the detail, don't send it
+    res.status(502).json({ error: 'Could not read the poster, try a clearer image' });
   }
 });
 
