@@ -4,11 +4,12 @@ import SaveButton from './SaveButton.jsx';
 import { distanceLabel, whenLabel } from '../../lib/format.js';
 import { CATEGORY_LABEL } from './eventCategories.js';
 
-// Row on phones (art on the left), column from sm up (art on top)
-export default function EventCard({ event }) {
+// Default: row on phones (art left, good for long lists), column from sm up.
+// stacked: always a column (art on top), for carousels.
+export default function EventCard({ event, stacked = false }) {
   return (
-    <article className="flex overflow-hidden rounded-card border border-line bg-surface shadow-card sm:flex-col">
-      <EventArt event={event} className="w-28 shrink-0 sm:aspect-[16/9] sm:w-full" />
+    <article className={`relative flex h-full overflow-hidden rounded-card border border-line bg-surface shadow-card ${stacked ? 'flex-col' : 'sm:flex-col'}`}>
+      <EventArt event={event} className={stacked ? 'aspect-[16/9] w-full' : 'w-28 shrink-0 sm:aspect-[16/9] sm:w-full'} />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3.5 sm:p-4">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
@@ -45,10 +46,10 @@ export default function EventCard({ event }) {
   );
 }
 
-export function EventCardSkeleton() {
+export function EventCardSkeleton({ stacked = false }) {
   return (
-    <div aria-hidden="true" className="flex animate-shimmer overflow-hidden rounded-card border border-line bg-surface sm:flex-col">
-      <div className="w-28 shrink-0 bg-line/70 sm:aspect-[16/9] sm:w-full" />
+    <div aria-hidden="true" className={`flex h-full animate-shimmer overflow-hidden rounded-card border border-line bg-surface ${stacked ? 'flex-col' : 'sm:flex-col'}`}>
+      <div className={`bg-line/70 ${stacked ? 'aspect-[16/9] w-full' : 'w-28 shrink-0 sm:aspect-[16/9] sm:w-full'}`} />
       <div className="flex-1 space-y-2.5 p-4">
         <div className="h-3 w-1/4 rounded bg-line/70" />
         <div className="h-4 w-3/4 rounded bg-line/70" />

@@ -15,6 +15,11 @@ the Tailwind utilities those tokens generate. If something here and the code dis
 
 ## 2. Design principles
 
+Lepak is a **product UI**, not a marketing site. Screens should feel like an app: compact headers,
+content and controls on the first screen, controls within thumb reach, fast scanning.
+
+0. **App, not landing page.** No poster-sized heroes or full-screen promo blocks. On a 390×844 phone the
+   first screen shows the ask box, the filters, Surprise Me and the start of the results.
 1. **Plans, not search results.** Lead with a question ("So, what's the plan?"), give a reason with
    every suggestion, and keep actions to the next step (save, go, pick another).
 2. **One loud thing per screen.** On Explore it is the Surprise Me block. Everything else stays quiet.
@@ -123,7 +128,13 @@ then the one-line *reason*, then a meta row (rating, price, distance) above a ha
 - Missing rating: omitted. Missing price: "Price unavailable". Missing distance: omitted.
 
 **Event card:** art panel (poster, or the category pattern) with a ticket-style date stub, then
-category (mono), title, time, venue + distance, Free/price badge. A row on phones, a column from `sm`.
+category (mono), title, time, venue + distance, Free/price badge.
+- Default (long lists like the Events page): a row on phones, a column from `sm`.
+- `stacked` (previews and carousels): always a column with the art on top.
+
+**Preview rail:** on phones a short preview with "See all" (e.g. events on Explore) is a sideways
+snap rail that bleeds to the screen edge, with the next card peeking in. It becomes a grid from `sm`.
+The rail must be `position: relative` so `sr-only` text inside off-screen cards can't widen the page.
 - Fallback art: market = pasar malam awning, music = vinyl rings, campus = ruled exercise-book paper,
   food = dotted tablecloth, other = diagonal stripes. Never a blank box.
 
@@ -136,7 +147,24 @@ japanese = ink + bowl; seafood = green + fish; anything else = cream + utensils.
   The active item has an orange-soft pill and an orange-ink icon with a semibold label. Items are 64px tall.
 - **Desktop (≥ lg):** the same links sit in the header as pills, and the bottom bar is hidden.
 - Header: wordmark (home), location pill (opens the area sheet), profile button.
-- Surprise Me is **not** a nav destination. It lives on Explore (block + chip).
+- **Sticky filter bar:** filters that control the results below (Explore's chips) stick under the
+  header (`top-16`) and gain a hairline and soft shadow only once stuck (`useStuck`).
+- Surprise Me is **not** a nav destination. It lives on Explore: a full-width orange banner that is a
+  single button (one big tap target), plus the chip in the filter bar.
+
+**Explore layout**
+```
+Phone                                 Desktop (lg)
+[header: lepak.  location  profile]   [header: lepak. Explore Events Saved   location profile]
+eyebrow / h1 32px / one line          eyebrow / h1 52px / one line
+[ask box                     ]        [ask box                  ][Surprise banner]
+[chips, sticky, scroll sideways]      [chips, sticky, wrap]
+[Surprise banner             ]        Nearby: 3-column grid
+Nearby: stacked cards                 Events: 3-column grid
+Events: sideways rail                 prototype note
+prototype note
+[bottom nav]
+```
 - Sheets: native `<dialog>`. A bottom sheet on phones, a centred dialog from `sm`; Esc, backdrop click and the close button all dismiss it.
 
 ## 11. Icons

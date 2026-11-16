@@ -7,6 +7,12 @@ import { getEvents } from '../../lib/mockApi.js';
 
 const SHOW = 3;
 
+// Phones: a sideways rail that bleeds to the screen edge, with the next card peeking in so it
+// reads as scrollable. From sm up: a normal grid.
+const RAIL = 'scrollbar-none relative -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 ' +
+  'sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3';
+const ITEM = 'w-[16.5rem] shrink-0 snap-start sm:w-auto';
+
 export default function EventsSection({ filters, areaId, onClear }) {
   const { loading, data, error, retry } = useAsync(
     () => getEvents({ free: filters.free, when: filters.when }),
@@ -20,8 +26,8 @@ export default function EventsSection({ filters, areaId, onClear }) {
         linkTo="/events" linkLabel="See all" />
 
       {loading && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: SHOW }, (_, i) => <EventCardSkeleton key={i} />)}
+        <div className={RAIL}>
+          {Array.from({ length: SHOW }, (_, i) => <div key={i} className={ITEM}><EventCardSkeleton stacked /></div>)}
         </div>
       )}
 
@@ -39,8 +45,8 @@ export default function EventsSection({ filters, areaId, onClear }) {
       ))}
 
       {data?.length > 0 && (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data.slice(0, SHOW).map((e) => <li key={e.id} className="grid"><EventCard event={e} /></li>)}
+        <ul className={RAIL} aria-label="Upcoming events, scroll sideways for more">
+          {data.slice(0, SHOW).map((e) => <li key={e.id} className={ITEM}><EventCard event={e} stacked /></li>)}
         </ul>
       )}
     </section>

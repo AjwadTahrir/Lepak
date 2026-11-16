@@ -10,13 +10,13 @@ const CHIPS = [
   { id: 'tonight', label: 'Tonight', icon: Moon },
 ];
 
+// Rendered inside the sticky filter bar; the bar provides the edge-to-edge bleed.
 export default function QuickChips({ filters, onToggle, onSurprise }) {
   const pressed = { food: filters.food, event: filters.event, free: filters.free, tonight: filters.when === 'tonight' };
 
   return (
-    // Bleeds to the screen edge on phones so it reads as scrollable
-    <div role="group" aria-label="Quick filters" className="scrollbar-none -mx-4 overflow-x-auto px-4 lg:mx-0 lg:overflow-visible lg:px-0">
-      <ul className="flex w-max gap-2 py-1 lg:w-auto lg:flex-wrap">
+    <div role="group" aria-label="Quick filters" className="scrollbar-none overflow-x-auto px-4">
+      <ul className="flex w-max gap-2">
         {CHIPS.map(({ id, label, icon: Icon, action }) => (
           <li key={id}>
             <button

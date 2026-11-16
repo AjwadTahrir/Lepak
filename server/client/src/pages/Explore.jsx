@@ -10,6 +10,7 @@ import EventsSection from '../components/explore/EventsSection.jsx';
 import Toast from '../components/ui/Toast.jsx';
 import { useLocationContext } from '../context/LocationContext.jsx';
 import { useSurprise } from '../hooks/useSurprise.js';
+import { useStuck } from '../hooks/useStuck.js';
 import { demoInterpret } from '../lib/demoInterpret.js';
 
 // Same shape the real POST /api/discovery/ask result will map onto
@@ -23,6 +24,7 @@ export default function Explore() {
   const [toast, setToast] = useState('');
   const surprise = useSurprise();
   const summaryRef = useRef(null);
+  const [chipSentinel, chipsStuck] = useStuck(64);     // header is 64px tall
 
   // Makan or Event alone narrows the page; neither or both shows everything
   const showFood = filters.food || !filters.event;
@@ -75,38 +77,45 @@ export default function Explore() {
 
   return (
     <div className="mx-auto max-w-5xl px-4">
-      <section aria-labelledby="hero-title" className="pt-6 pb-4 lg:pt-12 lg:pb-6">
-        <p className="font-mono text-xs tracking-[0.08em] text-orange-ink uppercase">Your next lepak starts here</p>
-        <h1 id="hero-title" className="mt-2 text-[2.625rem] leading-[1.02] font-extrabold tracking-[-0.045em] sm:text-6xl lg:text-[4.5rem]">
+      {/* Compact app header area: the ask box should be within thumb reach on the first screen */}
+      <section aria-labelledby="hero-title" className="pt-5 lg:pt-10">
+        <p className="font-mono text-[0.6875rem] tracking-[0.08em] text-orange-ink uppercase">Your next lepak starts here</p>
+        <h1 id="hero-title" className="mt-1.5 text-[2rem] leading-[1.05] font-extrabold tracking-[-0.04em] sm:text-[2.75rem] lg:text-[3.25rem]">
           So, what's the plan?
         </h1>
-        <p className="mt-3 max-w-[34ch] text-lg text-muted">
-          Good food, good places and good things happening around you.
-        </p>
+        <p className="mt-1.5 text-muted">Good food, good places and good things happening around you.</p>
 
-        {/* Phones: ask, chips, then Surprise. Desktop: ask + chips beside Surprise */}
-        <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
-          <div className="min-w-0">
-            <AskBox onAsk={ask} />
-            <div className="mt-4">
-              <QuickChips filters={filters} onToggle={toggle} onSurprise={openSurprise} />
-            </div>
+        {/* Phones: ask, then Surprise below the filters. Desktop: ask beside Surprise */}
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3 lg:mt-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-6">
+          <AskBox onAsk={ask} />
+          <div className="hidden lg:block">
+            <SurpriseCard onSurprise={openSurprise} />
           </div>
-          <SurpriseCard onSurprise={openSurprise} />
         </div>
       </section>
 
-      <div ref={summaryRef} className="scroll-mt-20">
-        {asked && <AskSummary id="ask-summary" message={asked} filters={filters} onClear={clear} />}
+      {/* Sticky filter bar: the chips stay in reach while you scroll the results they control */}
+      <div ref={chipSentinel} aria-hidden="true" />
+      <div className={`sticky top-16 z-20 -mx-4 bg-cream py-2.5 transition-shadow duration-200
+        ${chipsStuck ? 'shadow-[0_1px_0_var(--color-line),0_8px_16px_-12px_rgb(40_43_37/0.25)]' : ''}`}>
+        <QuickChips filters={filters} onToggle={toggle} onSurprise={openSurprise} />
       </div>
 
-      <p className="mt-4 flex items-start gap-2 font-mono text-xs text-muted">
-        <Info aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-        Prototype: these places and events are sample data, not real listings.
-      </p>
+      <div className="mt-1 lg:hidden">
+        <SurpriseCard onSurprise={openSurprise} />
+      </div>
+
+      <div ref={summaryRef} className="scroll-mt-32">
+        {asked && <div className="mt-4"><AskSummary id="ask-summary" message={asked} filters={filters} onClear={clear} /></div>}
+      </div>
 
       {showFood && <NearbySection filters={filters} areaId={place.id} narrowed={narrowed} onClear={clear} />}
       {showEvents && <EventsSection filters={filters} areaId={place.id} onClear={clear} />}
+
+      <p className="mt-2 flex items-start gap-2 border-t border-line pt-4 font-mono text-xs text-muted">
+        <Info aria-hidden="true" className="mt-px size-3.5 shrink-0" />
+        Prototype: these places and events are sample data, not real listings.
+      </p>
 
       <SurpriseSheet open={surpriseOpen} onClose={closeSurprise} surprise={surprise} onGo={go} />
       <Toast message={toast} onDone={clearToast} />

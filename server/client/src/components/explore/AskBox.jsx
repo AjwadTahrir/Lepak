@@ -14,13 +14,13 @@ export default function AskBox({ onAsk, busy = false }) {
   return (
     <form
       onSubmit={submit}
-      className="group rounded-input border-2 border-ink bg-surface p-2 shadow-[4px_4px_0_var(--color-ink)]
+      className="group flex flex-col rounded-input border-2 border-ink bg-surface p-2 shadow-[4px_4px_0_var(--color-ink)]
                  transition-shadow focus-within:shadow-[4px_4px_0_var(--color-orange)]"
     >
       <label htmlFor="ask" className="sr-only">Tell Lepak what you feel like doing</label>
       <textarea
         id="ask"
-        rows={3}
+        rows={2}
         maxLength={300}
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -28,7 +28,7 @@ export default function AskBox({ onAsk, busy = false }) {
           if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) submit(e);
         }}
         placeholder="Nak makan murah dekat sini, lepas tu ada apa weekend ni..."
-        className="block max-h-48 min-h-[5.5rem] w-full resize-none bg-transparent px-3 pt-2 text-[1.0625rem] leading-relaxed
+        className="block max-h-48 min-h-[4.25rem] w-full flex-1 resize-none bg-transparent px-3 pt-2 text-[1.0625rem] leading-relaxed
                    [field-sizing:content] placeholder:text-muted focus:outline-none"
       />
       <div className="flex items-center justify-between gap-3 pl-3">

@@ -5,7 +5,7 @@ import SaveButton from './SaveButton.jsx';
 export default function RestaurantCard({ place }) {
   const { icon: Icon, tile } = cuisineStyle(place.cuisine);
   return (
-    <article className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4 shadow-card">
+    <article className="relative flex flex-col gap-3 rounded-card border border-line bg-surface p-4 shadow-card">
       <div className="flex items-start gap-3">
         <div aria-hidden="true" className={`grid size-14 shrink-0 place-items-center rounded-[14px] ${tile}`}>
           <Icon className="size-7" strokeWidth={1.8} />
