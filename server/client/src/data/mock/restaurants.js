@@ -1,0 +1,71 @@
+// DEMO DATA. Fictional places for the prototype, not real listings.
+// Shape follows GET /api/restaurants/nearby so the UI can switch to the real API later.
+// `cuisine` uses the server's keys (services/interpret.js CUISINES), plus 'mamak'.
+export const restaurants = [
+  {
+    place_id: 'demo-kopi-sudut',
+    name: 'Kopi Sudut',
+    cuisine: 'cafe',
+    category: 'Cafe',
+    rating: 4.6,
+    rating_count: 212,
+    price: 2,
+    distance_km: 0.6,
+    reason: 'Quiet tables and plug points, good for a long study sesh.',
+  },
+  {
+    place_id: 'demo-warung-mak-teh',
+    name: 'Warung Mak Teh',
+    cuisine: 'malay',
+    category: 'Nasi campur',
+    rating: 4.3,
+    rating_count: 98,
+    price: 1,
+    distance_km: 0.4,
+    reason: 'A full plate for under RM10, and you can walk there.',
+  },
+  {
+    place_id: 'demo-bintang-mamak',
+    name: 'Restoran Bintang Mamak',
+    cuisine: 'mamak',
+    category: 'Mamak',
+    rating: 4.1,
+    rating_count: 1340,
+    price: 1,
+    distance_km: 1.2,
+    reason: 'Open 24 hours, so it still works after a late movie.',
+  },
+  {
+    place_id: 'demo-hinoki-ramen',
+    name: 'Hinoki Ramen Bar',
+    cuisine: 'japanese',
+    category: 'Japanese',
+    rating: 4.5,
+    rating_count: 486,
+    price: 3,
+    distance_km: 2.4,
+    reason: 'Rich tonkotsu, worth the slightly longer drive.',
+  },
+  {
+    place_id: 'demo-dapur-rimbun',
+    name: 'Dapur Rimbun',
+    cuisine: 'malay',
+    category: 'Malay',
+    rating: null,               // new place: no reviews yet
+    rating_count: 0,
+    price: null,                // price unknown
+    distance_km: 1.8,
+    reason: 'Just opened, so the crowd hasn\'t found it yet.',
+  },
+  {
+    place_id: 'demo-ikan-bakar-tepi-laut',
+    name: 'Ikan Bakar Tepi Laut',
+    cuisine: 'seafood',
+    category: 'Seafood',
+    rating: 4.4,
+    rating_count: 760,
+    price: null,
+    distance_km: 3.1,
+    reason: 'Grilled fish by the water. Go around sunset.',
+  },
+];

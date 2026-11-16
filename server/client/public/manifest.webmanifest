@@ -1,0 +1,14 @@
+{
+  "name": "Lepak",
+  "short_name": "Lepak",
+  "description": "Lepak mane weyh? Good food and things happening near you.",
+  "lang": "en-MY",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F8F4EA",
+  "theme_color": "#F8F4EA",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
