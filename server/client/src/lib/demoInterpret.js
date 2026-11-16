@@ -1,6 +1,13 @@
-// DEMO ONLY: keyword matching that stands in for POST /api/discovery/ask (Gemini on the server).
-// Returns the same filter shape the Explore screen uses, so the real call can replace it.
+// MOCK MODE ONLY: keyword matching that stands in for Groq (POST /api/discovery/ask).
+// Returns the same `interpreted` shape the server sends.
 const has = (text, words) => words.some((w) => text.includes(w));
+
+const CUISINE_WORDS = [
+  ['cafe', ['kopi', 'coffee', 'cafe', 'latte']],
+  ['japanese', ['ramen', 'sushi', 'japanese', 'jepun']],
+  ['seafood', ['seafood', 'ikan', 'udang', 'ketam']],
+  ['malay', ['nasi', 'malay', 'melayu']],
+];
 
 export function demoInterpret(message) {
   const t = message.toLowerCase();
@@ -8,11 +15,14 @@ export function demoInterpret(message) {
   const event = has(t, ['event', 'ada apa', 'buat apa', 'gig', 'concert', 'market', 'pasar', 'festival', 'jalan-jalan', 'hangout']);
 
   return {
-    food: food || !event,          // nothing recognised: show both
-    event: event || !food,
+    intent: food && !event ? 'food' : event && !food ? 'event' : 'both',
+    cuisine: CUISINE_WORDS.find(([, words]) => has(t, words))?.[0] ?? null,
     maxPrice: has(t, ['murah', 'cheap', 'budget', 'jimat', 'student']) ? 1 : null,
-    free: has(t, ['free', 'percuma']),
+    partySize: null,
+    radiusKm: has(t, ['dekat', 'nearby', 'sini']) ? 2 : null,
+    eventCategory: null,
+    freeOnly: has(t, ['free', 'percuma']),
     when: has(t, ['tonight', 'malam ni', 'malam nanti']) ? 'tonight'
-      : has(t, ['weekend', 'hujung minggu', 'sabtu', 'ahad']) ? 'weekend' : null,
+      : has(t, ['weekend', 'hujung minggu', 'sabtu', 'ahad']) ? 'this_weekend' : null,
   };
 }

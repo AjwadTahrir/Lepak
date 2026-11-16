@@ -2,13 +2,16 @@ import { CalendarX2, CloudOff } from 'lucide-react';
 import EventCard, { EventCardSkeleton } from '../components/cards/EventCard.jsx';
 import StateMessage from '../components/ui/StateMessage.jsx';
 import { useAsync } from '../hooks/useAsync.js';
-import { getEvents } from '../lib/mockApi.js';
+import { getEvents } from '../lib/data.js';
 import { useLocationContext } from '../context/LocationContext.jsx';
 
 // First version: everything in the next two weeks. Filters and the submit flow come in later tasks.
 export default function Events() {
   const { place } = useLocationContext();
-  const { loading, data, error, retry } = useAsync(() => getEvents(), place.id);
+  const { loading, data, error, retry } = useAsync(
+    () => getEvents({ lat: place.lat, lng: place.lng }),
+    `${place.lat},${place.lng}`,
+  );
 
   return (
     <div className="mx-auto max-w-5xl px-4 pt-6 lg:pt-10">

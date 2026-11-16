@@ -18,11 +18,12 @@ the Tailwind utilities those tokens generate. If something here and the code dis
 Lepak is a **product UI**, not a marketing site. Screens should feel like an app: compact headers,
 content and controls on the first screen, controls within thumb reach, fast scanning.
 
-0. **App, not landing page.** No poster-sized heroes or full-screen promo blocks. On a 390×844 phone the
-   first screen shows the ask box, the filters, Surprise Me and the start of the results.
+0. **App, not landing page.** No full-screen promo blocks. On a 390×844 phone the first screen shows
+   Surprise Me, the ask box, the filters and the start of the results.
 1. **Plans, not search results.** Lead with a question ("So, what's the plan?"), give a reason with
    every suggestion, and keep actions to the next step (save, go, pick another).
-2. **One loud thing per screen.** On Explore it is the Surprise Me block. Everything else stays quiet.
+2. **One loud thing per screen.** On Explore it is the Surprise Me hero, the main character: it leads the
+   page and carries the page question as its headline. Everything else stays quiet.
 3. **Typography and colour do the work.** No photos yet, so identity comes from type, flat colour
    and patterns from the subject's own world (awnings, vinyl, ruled paper).
 4. **Honest data.** Missing rating or price is left out or labelled, never faked. Sample data is
@@ -66,7 +67,7 @@ Fonts are self-hosted through `@fontsource` (no Google Fonts request), so the PW
 
 | Style | Size / line height | Notes |
 |---|---|---|
-| Hero h1 | 42px → 60px (sm) → 72px (lg) / 1.02 | 800, tracking −0.045em |
+| Hero h1 (in Surprise hero) | 30px (<360) → 34px → 48px (sm) → 64px (lg) / 1.02 | 800, tracking −0.045em |
 | Page h1 | 36px | 800, tracking −0.04em |
 | Section h2 | 22px → 24px | 800, tracking −0.02em |
 | Card title h3 | 17px / snug | 700 |
@@ -149,17 +150,18 @@ japanese = ink + bowl; seafood = green + fish; anything else = cream + utensils.
 - Header: wordmark (home), location pill (opens the area sheet), profile button.
 - **Sticky filter bar:** filters that control the results below (Explore's chips) stick under the
   header (`top-16`) and gain a hairline and soft shadow only once stuck (`useStuck`).
-- Surprise Me is **not** a nav destination. It lives on Explore: a full-width orange banner that is a
-  single button (one big tap target), plus the chip in the filter bar.
+- Surprise Me is **not** a nav destination. It leads Explore as the hero: a full-width orange block holding
+  the h1, the Surprise me button and the card deck. The button's `::after` covers the whole block, so the
+  entire block is one tap target. The chip in the filter bar keeps it in reach after scrolling.
 
 **Explore layout**
 ```
 Phone                                 Desktop (lg)
 [header: lepak.  location  profile]   [header: lepak. Explore Events Saved   location profile]
-eyebrow / h1 32px / one line          eyebrow / h1 52px / one line
-[ask box                     ]        [ask box                  ][Surprise banner]
+[Surprise hero: h1 34px + deck]       [Surprise hero: h1 64px, button, big deck right]
+[ask box                     ]        [ask box, full width                         ]
 [chips, sticky, scroll sideways]      [chips, sticky, wrap]
-[Surprise banner             ]        Nearby: 3-column grid
+                                      Nearby: 3-column grid
 Nearby: stacked cards                 Events: 3-column grid
 Events: sideways rail                 prototype note
 prototype note
@@ -225,12 +227,18 @@ src/
     layout/                 AppShell, Header, BottomNav, Wordmark, LocationSheet, navItems
     ui/                     Sheet, StateMessage, SectionHeader, Toast (generic, no Lepak data)
     cards/                  RestaurantCard, EventCard, EventArt, PlaceMeta, SaveButton, cuisine, eventCategories
-    explore/                AskBox, QuickChips, SurpriseCard, SurpriseSheet, AskSummary, Nearby/EventsSection
+    explore/                AskBox, QuickChips, SurpriseHero, SurpriseSheet, AskSummary, Nearby/EventsSection
   pages/                    Explore, Events, Saved, Profile, NotFound
   context/                  LocationContext (area + GPS), SavedContext (local saves)
   hooks/                    useAsync (loading/data/error), useSurprise
-  lib/                      mockApi (swap for the real API), demoInterpret, format
+  lib/data.js               the only data import for screens: live API, or mock when VITE_USE_MOCK=true
+  lib/                      api (fetch + token), liveApi, mockApi, places (Google types -> cuisine,
+                            stats-only reasons hidden, registration numbers stripped), format, eventFilters
   data/                     areas, mock/ (sample restaurants and events)
 ```
-New screens reuse `cards/` and `ui/`. New data goes through a `lib/` function that returns a Promise,
-so loading, empty and error states come for free.
+New screens reuse `cards/` and `ui/`. New data goes through `lib/data.js` (a function in both
+`liveApi.js` and `mockApi.js` with the same shape), so loading, empty and error states come for free.
+
+**Restaurant reasons:** the server's `reason` is currently only stats, which the card already shows, so
+`places.js` drops any reason made only of rating, price and distance. A real "why this" line from the
+server will show up automatically.

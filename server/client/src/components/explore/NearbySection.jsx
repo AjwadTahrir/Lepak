@@ -1,46 +1,16 @@
-import { CloudOff, MapPinOff } from 'lucide-react';
-import SectionHeader from '../ui/SectionHeader.jsx';
-import StateMessage from '../ui/StateMessage.jsx';
-import RestaurantCard, { RestaurantCardSkeleton } from '../cards/RestaurantCard.jsx';
+import { RestaurantResults } from './ResultSections.jsx';
 import { useAsync } from '../../hooks/useAsync.js';
-import { getNearbyRestaurants } from '../../lib/mockApi.js';
+import { getNearbyRestaurants } from '../../lib/data.js';
 
-const SHOW = 3;
-
-export default function NearbySection({ filters, areaId, narrowed, onClear }) {
+// Browsing: fetches ranked restaurants around the current location
+export default function NearbySection({ coords }) {
   const { loading, data, error, retry } = useAsync(
-    () => getNearbyRestaurants({ maxPrice: filters.maxPrice }),
-    `${areaId}|${filters.maxPrice}`,
+    () => getNearbyRestaurants({ lat: coords.lat, lng: coords.lng }),
+    `${coords.lat},${coords.lng}`,
   );
 
   return (
-    <section aria-labelledby="nearby-title" aria-busy={loading} className="py-6">
-      <SectionHeader id="nearby-title" title="Nearby lepak spots" subtitle="Some places worth checking out." />
-
-      {loading && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: SHOW }, (_, i) => <RestaurantCardSkeleton key={i} />)}
-        </div>
-      )}
-
-      {error && (
-        <StateMessage tone="error" icon={CloudOff} title="Couldn't load nearby spots."
-          body="Check your connection, then try again." action="Try again" onAction={retry} />
-      )}
-
-      {data?.length === 0 && (
-        <StateMessage icon={MapPinOff} title="Hmm, kawasan ni quiet sikit."
-          body={narrowed ? 'Nothing matches all your filters here. Try loosening them?' : 'Try expanding your distance, or pick another area from the top.'}
-          action={narrowed ? 'Clear filters' : undefined} onAction={onClear} />
-      )}
-
-      {data?.length > 0 && (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data.slice(0, SHOW).map((p) => (
-            <li key={p.place_id} className="grid"><RestaurantCard place={p} /></li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <RestaurantResults loading={loading} data={data} error={error} onRetry={retry}
+      empty={{ title: 'Hmm, kawasan ni quiet sikit.', body: 'Try expanding your distance, or pick another area from the top.' }} />
   );
 }

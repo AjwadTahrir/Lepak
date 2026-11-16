@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { allRestaurantNames, getSurprise } from '../lib/mockApi.js';
+import { getSurprise } from '../lib/data.js';
 
 const ROLL_MS = 900;          // anticipation: long enough to feel like a pick, short enough not to wait
-const TICK_MS = 70;
+const TICK_MS = 80;
+// What flashes past while shuffling. Kinds of food, not real place names, so it never implies a result.
+const TICKER = ['Nasi lemak', 'Mamak', 'Ramen', 'Kopi', 'Ikan bakar', 'Char kuey teow', 'Roti canai', 'Sushi', 'Laksa', 'Burger'];
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -11,29 +13,31 @@ export function useSurprise() {
   const [state, setState] = useState({ phase: 'idle', pick: null, ticker: '' });
   const ticker = useRef(null);
   const lastId = useRef(null);
+  const coords = useRef(null);
   const run = useRef(0);
 
   const stopTicker = () => clearInterval(ticker.current);
   useEffect(() => stopTicker, []);
 
-  const roll = useCallback(async () => {
+  // Pass { lat, lng } on the first roll; rerolls reuse them
+  const roll = useCallback(async (at) => {
+    if (at) coords.current = at;
     const id = ++run.current;
     const reduce = prefersReducedMotion();
-    const names = allRestaurantNames();
-    let i = Math.floor(Math.random() * names.length);
+    let i = Math.floor(Math.random() * TICKER.length);
 
     stopTicker();
-    setState((s) => ({ ...s, phase: 'rolling', ticker: names[i] }));
+    setState((s) => ({ ...s, phase: 'rolling', ticker: TICKER[i] }));
     if (!reduce) {
       ticker.current = setInterval(() => {
-        i = (i + 1) % names.length;
-        setState((s) => ({ ...s, ticker: names[i] }));
+        i = (i + 1) % TICKER.length;
+        setState((s) => ({ ...s, ticker: TICKER[i] }));
       }, TICK_MS);
     }
 
     try {
       const [pick] = await Promise.all([
-        getSurprise({ excludeId: lastId.current }),
+        getSurprise({ ...coords.current, excludeId: lastId.current }),
         new Promise((r) => setTimeout(r, reduce ? 0 : ROLL_MS)),
       ]);
       if (id !== run.current) return;               // a newer roll started

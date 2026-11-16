@@ -11,7 +11,7 @@ import eventsRouter from './routes/events.js';
 import discoveryRouter from './routes/discovery.js';
 
 // Fail fast instead of running half-configured (e.g. CORS silently falling back to '*')
-const REQUIRED = ['CLIENT_ORIGIN', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY', 'GOOGLE_PLACES_API_KEY'];
+const REQUIRED = ['CLIENT_ORIGIN', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'GOOGLE_PLACES_API_KEY'];
 const missing = REQUIRED.filter((k) => !process.env[k]);
 if (missing.length) {
   console.error(`Missing env vars: ${missing.join(', ')}`);

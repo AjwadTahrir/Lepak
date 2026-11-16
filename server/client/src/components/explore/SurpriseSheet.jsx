@@ -4,7 +4,8 @@ import PlaceMeta from '../cards/PlaceMeta.jsx';
 import { cuisineStyle } from '../cards/cuisine.js';
 
 // surprise = useSurprise() state. Rolling cycles names for under a second, then reveals the pick.
-export default function SurpriseSheet({ open, onClose, surprise, onGo }) {
+// goHref(pick): a Maps link for real places; without it, onGo handles the tap (mock mode)
+export default function SurpriseSheet({ open, onClose, surprise, onGo, goHref }) {
   const { phase, pick, ticker, roll } = surprise;
 
   return (
@@ -25,19 +26,19 @@ export default function SurpriseSheet({ open, onClose, surprise, onGo }) {
         </div>
       )}
 
-      {phase === 'shown' && pick && <Reveal pick={pick} onGo={() => onGo(pick)} onReroll={roll} />}
+      {phase === 'shown' && pick && <Reveal pick={pick} goHref={goHref?.(pick)} onGo={() => onGo(pick)} onReroll={() => roll()} />}
 
       {phase === 'empty' && (
-        <Fallback title="Tak jumpa yang ngam." body="Nothing good nearby to pick from. Try another area?" action="Try again" onAction={roll} />
+        <Fallback title="Tak jumpa yang ngam." body="Nothing good nearby to pick from. Try another area?" action="Try again" onAction={() => roll()} />
       )}
       {phase === 'error' && (
-        <Fallback title="Couldn't pick a place." body="Check your connection, then try again." action="Try again" onAction={roll} />
+        <Fallback title="Couldn't pick a place." body="Check your connection, then try again." action="Try again" onAction={() => roll()} />
       )}
     </Sheet>
   );
 }
 
-function Reveal({ pick, onGo, onReroll }) {
+function Reveal({ pick, goHref, onGo, onReroll }) {
   const { icon: Icon, tile } = cuisineStyle(pick.cuisine);
   return (
     <div key={pick.place_id} className="animate-pop">
@@ -54,9 +55,16 @@ function Reveal({ pick, onGo, onReroll }) {
       <PlaceMeta place={pick} className="mt-3 rounded-button bg-cream px-3 py-2.5" />
 
       <div className="mt-5 grid gap-2.5">
-        <button type="button" onClick={onGo} className="min-h-12 rounded-button bg-orange font-bold text-ink hover:bg-orange-hover active:translate-y-px">
-          Let's go!
-        </button>
+        {goHref ? (
+          <a href={goHref} target="_blank" rel="noreferrer"
+            className="grid min-h-12 place-items-center rounded-button bg-orange font-bold text-ink hover:bg-orange-hover active:translate-y-px">
+            Let's go!<span className="sr-only"> (opens Google Maps)</span>
+          </a>
+        ) : (
+          <button type="button" onClick={onGo} className="min-h-12 rounded-button bg-orange font-bold text-ink hover:bg-orange-hover active:translate-y-px">
+            Let's go!
+          </button>
+        )}
         <button
           type="button"
           onClick={onReroll}

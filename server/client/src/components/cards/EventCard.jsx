@@ -14,7 +14,7 @@ export default function EventCard({ event, stacked = false }) {
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             <p className="font-mono text-xs text-muted">{CATEGORY_LABEL[event.category] ?? 'Event'}</p>
-            <h3 className="mt-0.5 text-[1.0625rem] leading-snug font-bold">{event.title}</h3>
+            <h3 className="mt-0.5 text-[1.0625rem] leading-snug font-bold [overflow-wrap:anywhere]">{event.title}</h3>
           </div>
           <SaveButton kind="events" id={event.id} item={event} name={event.title} className="-mt-2 -mr-2" />
         </div>

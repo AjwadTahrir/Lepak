@@ -11,7 +11,7 @@ export default function RestaurantCard({ place }) {
           <Icon className="size-7" strokeWidth={1.8} />
         </div>
         <div className="min-w-0 flex-1 pt-0.5">
-          <h3 className="text-[1.0625rem] leading-snug font-bold">{place.name}</h3>
+          <h3 className="text-[1.0625rem] leading-snug font-bold [overflow-wrap:anywhere]">{place.name}</h3>
           <p className="text-sm text-muted">{place.category}</p>
         </div>
         <SaveButton kind="places" id={place.place_id} item={place} name={place.name} className="-mt-1.5 -mr-1.5" />

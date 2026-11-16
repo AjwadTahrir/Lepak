@@ -1,6 +1,8 @@
 const MODEL = () => process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 
-export async function callGemini(parts, { timeoutMs = 30_000 } = {}) {
+// Retries 429/503 and timeouts: Gemini occasionally hangs on one request, and a fresh
+// request usually answers in a few seconds, so waiting longer on the stuck one is wasted.
+export async function callGemini(parts, { timeoutMs = 30_000, attempts = 3 } = {}) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL()}:generateContent`;
   const body = JSON.stringify({
     contents: [{ parts }],
@@ -8,14 +10,21 @@ export async function callGemini(parts, { timeoutMs = 30_000 } = {}) {
   });
 
   let res;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
-      body,
-      signal: AbortSignal.timeout(timeoutMs),      // fresh signal on every attempt
-    });
-    if (res.status !== 503 && res.status !== 429) break;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const last = attempt === attempts - 1;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
+        body,
+        signal: AbortSignal.timeout(timeoutMs),      // fresh signal on every attempt
+      });
+    } catch (e) {
+      if (e.name !== 'TimeoutError' || last) throw e;
+      console.warn(`Gemini timed out after ${timeoutMs / 1000}s, retrying`);
+      continue;                                      // retry a hang straight away
+    }
+    if ((res.status !== 503 && res.status !== 429) || last) break;
     await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
   }
   if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);

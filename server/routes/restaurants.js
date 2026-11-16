@@ -12,7 +12,6 @@ const PRICE = { PRICE_LEVEL_FREE: 0, PRICE_LEVEL_INEXPENSIVE: 1, PRICE_LEVEL_MOD
                 PRICE_LEVEL_EXPENSIVE: 3, PRICE_LEVEL_VERY_EXPENSIVE: 4 };
 const PRICE_LABEL = ['Free', '$', '$$', '$$$', '$$$$'];
 
-const DEFAULT_MIN_RATING = 3.5;
 // Bayesian average: few reviews get pulled toward PRIOR. PRIOR is deliberately "meh" (3.5)
 // so a place with 0-3 reviews can't outrank a well-reviewed 4.2. M = reviews needed to be trusted half-way.
 const PRIOR = 3.5, M = 25;
@@ -23,11 +22,8 @@ export async function discover(query) {
 
   const radius = Math.min(parseInt(query.radius) || 2000, 5000);
   const maxPrice = query.maxPrice != null ? parseInt(query.maxPrice) : null;
-  // minRating=0 is allowed explicitly; missing/invalid falls back to the default
-  const parsedMin = parseFloat(query.minRating);
-  const minRating = Number.isNaN(parsedMin) ? DEFAULT_MIN_RATING : parsedMin;
 
-  const places = await getNearbyPlaces({ lat, lng, radius, cuisine: query.cuisine });
+  const places = await getNearbyPlaces({ lat, lng, radius, cuisine: query.cuisine, maxPrice });
 
   return places
     .map((p) => {
@@ -38,8 +34,6 @@ export async function discover(query) {
       return { ...p, distance_km: +dist.toFixed(2), price, score: weighted * 2 - dist };
     })
     .filter((p) => p.distance_km * 1000 <= radius)
-    // Unrated places stay (new stalls are worth discovering) but rank as PRIOR
-    .filter((p) => p.rating == null || p.rating >= minRating)
     .filter((p) => maxPrice == null || Number.isNaN(maxPrice) || p.price == null || p.price <= maxPrice)
     .sort((a, b) => b.score - a.score)
     .map((p) => ({
@@ -50,7 +44,8 @@ export async function discover(query) {
     }));
 }
 
-// Ranked list. Query: lat, lng, radius (m, max 5000), cuisine, maxPrice, minRating
+// Ranked list. Query: lat, lng, radius (m, max 5000), cuisine, maxPrice.
+// No rating cutoff: low-rated and unrated places still show, the Bayesian score just ranks them lower.
 router.get('/nearby', async (req, res) => {
   res.json(await discover(req.query));
 });
