@@ -1,3 +1,8 @@
 node_modules/
 .env
 dist/
+# Scraped Threads posts / research output: never commit other people's posts
+/s1.json
+/s2.json
+server/preview*.json
+server/wikl.json

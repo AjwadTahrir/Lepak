@@ -2,10 +2,12 @@ const MODEL = () => process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
 
 // Text-only JSON calls (Groq's OpenAI-compatible API). Poster images stay on Gemini.
 // Retries 429/503 and timeouts, same as callGemini.
-export async function callGroq(prompt, { timeoutMs = 10_000, attempts = 2 } = {}) {
+// system (optional): rules the model weighs above the user turn. Put untrusted text in
+// `prompt` and the instructions in `system`, so the text can't pose as instructions.
+export async function callGroq(prompt, { system, timeoutMs = 10_000, attempts = 2 } = {}) {
   const body = JSON.stringify({
     model: MODEL(),
-    messages: [{ role: 'user', content: prompt }],
+    messages: [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }],
     response_format: { type: 'json_object' },        // prompt must mention JSON, which ours do
     temperature: 0.1,
   });

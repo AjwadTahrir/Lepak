@@ -9,6 +9,7 @@ import { requireAuth } from './middleware/auth.js';
 import restaurantsRouter from './routes/restaurants.js';
 import eventsRouter from './routes/events.js';
 import discoveryRouter from './routes/discovery.js';
+import threadsRouter from './routes/threads.js';
 
 // Fail fast instead of running half-configured (e.g. CORS silently falling back to '*')
 const REQUIRED = ['CLIENT_ORIGIN', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'GOOGLE_PLACES_API_KEY'];
@@ -30,6 +31,16 @@ app.use(express.json({ limit: '1mb' }));
 app.use(rateLimit({ windowMs: 60_000, max: 100 }));
 app.use('/api/events', eventsRouter);
 app.use('/api/discovery', discoveryRouter);
+// Research only: the Threads scraper routes exist only when explicitly switched on.
+// Never set THREADS_SOURCE=scraper in production.
+if (process.env.THREADS_SOURCE === 'scraper') {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('THREADS_SOURCE=scraper is not allowed in production');
+    process.exit(1);
+  }
+  app.use('/api/threads', threadsRouter);
+  console.warn('Threads scraper routes enabled (research mode)');
+}
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
